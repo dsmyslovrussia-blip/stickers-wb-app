@@ -1,0 +1,9 @@
+requests
+urllib3
+pyautogui
+opencv-python
+Pillow
+pywin32
+pypdf
+reportlab
+python-dotenv
