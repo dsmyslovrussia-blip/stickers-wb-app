@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Стикеры ВБ и Озон</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 26px;
+            font-weight: 800;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        .status-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 700;
+            margin-top: 10px;
+            background: rgba(255,255,255,0.15);
+        }
+        .mode-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .mode-btn {
+            padding: 18px;
+            border: 3px solid #e0e0e0;
+            border-radius: 16px;
+            background: white;
+            text-align: center;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+        .mode-btn.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 16px;
+            border: none;
+            border-radius: 16px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);
+            color: white;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-full { grid-column: span 2; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 18px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: #667eea;
+            margin-bottom: 6px;
+        }
+        .stat-label {
+            font-size: 13px;
+            color: #666;
+            font-weight: 600;
+        }
+        .logs-section {
+            margin-top: 25px;
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .logs-section h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 700;
+        }
+        .log-container {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 12px;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        .log-entry:last-child { border-bottom: none; margin-bottom: 0; }
+        .log-time { color: #6272a4; margin-right: 12px; }
+        .log-info { color: #8be9fd; }
+        .log-success { color: #50fa7b; font-weight: 600; }
+        .log-error { color: #ff5555; font-weight: 600; }
+        .log-warning { color: #f1fa8c; font-weight: 600; }
+        .log-action { color: #bd93f9; font-weight: 600; }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .bottom-space { height: 30px; }
+        .process-page, .settings-page, .waiting-page { display: none; }
+        .process-page.active, .settings-page.active, .waiting-page.active { display: block; }
+        .back-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+        .waiting-page { text-align: center; padding: 40px 20px; }
+        .waiting-icon { font-size: 60px; margin-bottom: 20px; animation: bounce 1s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Главная страница -->
+        <div id="mainPage">
+            <h1>🖨️ Стикеры ВБ и Озон</h1>
+            <p class="subtitle">Локальный агент автоматизации</p>
+            
+            <div class="status-card">
+                <h2>Статус агента</h2>
+                <div id="statusText">Загрузка...</div>
+                <div class="status-badge" id="statusBadge">
+                    <span class="loading"></span>Загрузка
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="ordersCount">0</div>
+                    <div class="stat-label">Заказов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stickersCount">0</div>
+                    <div class="stat-label">Стикеров</div>
+                </div>
+            </div>
+            
+            <h3 style="margin-bottom: 15px; color: #333;">Режим работы</h3>
+            <div class="mode-selector">
+                <div class="mode-btn active" data-mode="test">🧪 Тест</div>
+                <div class="mode-btn" data-mode="production">🚀 Рабочий</div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" id="startBtn">▶️ Запустить</button>
+                <button class="btn btn-secondary" id="statusBtn">📊 Статус</button>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-warning" id="logsBtn">📝 Логи</button>
+                <button class="btn btn-secondary" id="settingsBtn">⚙️ Настройки</button>
+            </div>
+            
+            <button class="btn btn-danger btn-full" id="cancelBtn" disabled>❌ Отменить обработку</button>
+            
+            <div class="logs-section">
+                <h3>📋 Последние действия</h3>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry">
+                        <span class="log-time">[00:00:00]</span>
+                        <span class="log-info">ℹ️ Мини-приложение загружено</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bottom-space"></div>
+        </div>
+        
+        <!-- Страница процесса -->
+        <div id="processPage" class="process-page">
+            <button class="back-btn" id="backToMain">← Назад</button>
+            <h1>🔄 Обработка заказов</h1>
+            <p class="subtitle">Пожалуйста, подождите...</p>
+            
+            <div class="status-card">
+                <h2 id="processStatus">Запуск...</h2>
+                <div id="processSubStatus">Подготовка к работе</div>
+                <div class="status-badge" id="processBadge">
+                    <span class="loading"></span>В процессе
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="processedOrders">0</div>
+                    <div class="stat-label">Обработано</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalOrders">0</div>
+                    <div class="stat-label">Всего</div>
+                </div>
+            </div>
+            
+            <div class="logs-section">
+                <h3>📝 Журнал операций</h3>
+                <div class="log-container" id="processLogContainer">
+                    <div class="log-entry">
+                        <span class="log-time">[00:00:00]</span>
+                        <span class="log-info">ℹ️ Начало обработки...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="btn btn-danger btn-full" id="processCancelBtn">❌ Прервать обработку</button>
+            <div class="bottom-space"></div>
+        </div>
+        
+        <!-- Страница ожидания -->
+        <div id="waitingPage" class="waiting-page">
+            <div class="waiting-icon">⏳</div>
+            <h2>Ожидание подтверждения</h2>
+            <p>Администратор получит уведомление о вашем запросе</p>
+            <p style="color: #999; margin-top: 20px;">Пожалуйста, подождите...</p>
+            <div style="margin-top: 30px;">
+                <span class="loading"></span>
+                <span style="color: #666;">Запрос отправлен...</span>
+            </div>
+        </div>
+        
+        <!-- Страница настроек -->
+        <div id="settingsPage" class="settings-page">
+            <button class="back-btn" id="backToMainFromSettings">← Назад</button>
+            <h1>⚙️ Настройки</h1>
+            <p class="subtitle">Управление агентом</p>
+            
+            <div style="background: #f8f9fa; border-radius: 16px; padding: 20px; margin-bottom: 15px;">
+                <h3 style="font-size: 18px; margin-bottom: 15px; color: #333;">Основные настройки</h3>
+                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e0e0e0;">
+                    <span style="font-size: 15px; color: #333;">Текущий принтер:</span>
+                    <span style="font-size: 14px; color: #667eea;" id="currentPrinter">Загрузка...</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e0e0e0;">
+                    <span style="font-size: 15px; color: #333;">Авто-печать:</span>
+                    <span style="font-size: 14px; color: #667eea;" id="autoPrintStatus">Загрузка...</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+                    <span style="font-size: 15px; color: #333;">Авто-запуск:</span>
+                    <span style="font-size: 14px; color: #667eea;" id="autoStartStatus">Загрузка...</span>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary btn-full" id="refreshSettingsBtn">🔄 Обновить</button>
+            <div class="bottom-space"></div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        // DOM элементы
+        const mainPage = document.getElementById('mainPage');
+        const processPage = document.getElementById('processPage');
+        const waitingPage = document.getElementById('waitingPage');
+        const settingsPage = document.getElementById('settingsPage');
+        const statusBadge = document.getElementById('statusBadge');
+        const statusText = document.getElementById('statusText');
+        const ordersCount = document.getElementById('ordersCount');
+        const stickersCount = document.getElementById('stickersCount');
+        const startBtn = document.getElementById('startBtn');
+        const statusBtn = document.getElementById('statusBtn');
+        const logsBtn = document.getElementById('logsBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        const logContainer = document.getElementById('logContainer');
+        const backToMain = document.getElementById('backToMain');
+        const processStatus = document.getElementById('processStatus');
+        const processSubStatus = document.getElementById('processSubStatus');
+        const processBadge = document.getElementById('processBadge');
+        const processedOrders = document.getElementById('processedOrders');
+        const totalOrders = document.getElementById('totalOrders');
+        const processLogContainer = document.getElementById('processLogContainer');
+        const processCancelBtn = document.getElementById('processCancelBtn');
+        const backToMainFromSettings = document.getElementById('backToMainFromSettings');
+        const refreshSettingsBtn = document.getElementById('refreshSettingsBtn');
+        const currentPrinter = document.getElementById('currentPrinter');
+        const autoPrintStatus = document.getElementById('autoPrintStatus');
+        const autoStartStatus = document.getElementById('autoStartStatus');
+        
+        // Глобальные переменные
+        let currentMode = 'test';
+        let isRunning = false;
+        let waitingForApproval = false;
+        
+        // Инициализация
+        initApp();
+        
+        function initApp() {
+            const user = tg.initDataUnsafe?.user;
+            if (user) {
+                addLog(`👤 Пользователь: ${user.first_name || 'Unknown'}`);
+            }
+            checkBotParams();
+            requestStatus();
+        }
+        
+        // Проверка параметров от бота (через URL)
+        function checkBotParams() {
+            const params = new URLSearchParams(window.location.search);
+            const botData = params.get('data');
+            
+            if (botData) {
+                try {
+                    const data = JSON.parse(decodeURIComponent(botData));
+                    
+                    // Обработка авторизации настроек
+                    if (data.settings_auth) {
+                        if (data.settings_auth.approved) {
+                            hideWaitingPage();
+                            showSettingsPage();
+                            loadSettingsData(data.settings_auth.settings);
+                            addLog('✅ Доступ к настройкам разрешён', 'success');
+                        } else if (data.settings_auth.denied) {
+                            hideWaitingPage();
+                            showMainPage();
+                            addLog('❌ Доступ к настройкам запрещён', 'error');
+                        }
+                    }
+                    
+                    // Обновление статуса
+                    if (data.status) {
+                        updateStatus(data.status, data.mode);
+                        addLog(`📊 Статус обновлён: ${data.status}`, 'info');
+                    }
+                    
+                    // Обновление статистики
+                    if (data.stats) {
+                        ordersCount.textContent = data.stats.orders || 0;
+                        stickersCount.textContent = data.stats.stickers || 0;
+                    }
+                    
+                    // Логи
+                    if (data.logs && Array.isArray(data.logs)) {
+                        logContainer.innerHTML = '';
+                        data.logs.forEach(log => {
+                            addLog(log.message, log.type || 'info');
+                        });
+                    }
+                } catch (e) {
+                    console.error('Ошибка парсинга параметров:', e);
+                }
+            }
+        }
+        
+        // Выбор режима
+        modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                modeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
+                startBtn.textContent = currentMode === 'test' ? '▶️ Запустить (тест)' : '▶️ Запустить (рабочий)';
+                addLog(`🔄 Режим изменён: ${currentMode}`, 'action');
+            });
+        });
+        
+        // Запуск обработки
+        startBtn.addEventListener('click', () => {
+            if (isRunning) return;
+            addLog(`🚀 Запуск обработки (${currentMode} режим)`, 'action');
+            tg.sendData(JSON.stringify({ action: 'start_process', mode: currentMode }));
+            showProcessPage();
+        });
+        
+        // Проверка статуса
+        statusBtn.addEventListener('click', () => {
+            addLog('📊 Запрос статуса...', 'action');
+            requestStatus();
+        });
+        
+        // Запрос статуса
+        function requestStatus() {
+            tg.sendData(JSON.stringify({ action: 'check_status' }));
+        }
+        
+        // Просмотр логов
+        logsBtn.addEventListener('click', () => {
+            addLog('📜 Запрос логов...', 'action');
+            tg.sendData(JSON.stringify({ action: 'get_logs' }));
+        });
+        
+        // Настройки - запрос авторизации
+        settingsBtn.addEventListener('click', () => {
+            if (waitingForApproval) return;
+            addLog('⚙️ Запрос доступа к настройкам...', 'action');
+            
+            const user = tg.initDataUnsafe?.user;
+            tg.sendData(JSON.stringify({
+                action: 'request_settings_access',
+                session_id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+                user: { id: user?.id, first_name: user?.first_name, username: user?.username }
+            }));
+            
+            waitingForApproval = true;
+            showWaitingPage();
+        });
+        
+        // Отмена (главная)
+        cancelBtn.addEventListener('click', () => {
+            addLog('🛑 Отмена обработки...', 'warning');
+            tg.sendData(JSON.stringify({ action: 'cancel_process' }));
+            resetUI();
+        });
+        
+        // Назад к главной
+        backToMain.addEventListener('click', () => hideProcessPage());
+        backToMainFromSettings.addEventListener('click', () => hideSettingsPage());
+        
+        // Обновить настройки
+        refreshSettingsBtn.addEventListener('click', () => {
+            addLog('🔄 Обновление настроек...', 'action');
+            tg.sendData(JSON.stringify({ action: 'get_settings' }));
+        });
+        
+        // Отмена (страница процесса)
+        processCancelBtn.addEventListener('click', () => {
+            addProcessLog('🛑 Запрос на отмену...', 'warning');
+            tg.sendData(JSON.stringify({ action: 'cancel_process' }));
+            setTimeout(() => { hideProcessPage(); resetUI(); }, 1000);
+        });
+        
+        // Обновление статуса
+        function updateStatus(status, mode = null) {
+            if (status === 'ready') {
+                statusBadge.className = 'status-badge';
+                statusBadge.innerHTML = '🟢 Готов';
+                statusText.textContent = 'Агент готов к работе';
+                isRunning = false;
+                startBtn.disabled = false;
+                cancelBtn.disabled = true;
+            } else if (status === 'busy') {
+                statusBadge.className = 'status-badge';
+                statusBadge.innerHTML = '<span class="loading"></span>Занят';
+                statusText.textContent = mode ? `Обработка (${mode})` : 'Занят';
+                isRunning = true;
+                startBtn.disabled = true;
+                cancelBtn.disabled = false;
+            } else if (status === 'error') {
+                statusBadge.className = 'status-badge';
+                statusBadge.innerHTML = '🔴 Ошибка';
+                statusText.textContent = 'Ошибка выполнения';
+            }
+        }
+        
+        // Добавление лога
+        function addLog(message, type = 'info') {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            let typeClass = 'log-info';
+            if (type === 'success') typeClass = 'log-success';
+            if (type === 'error') typeClass = 'log-error';
+            if (type === 'warning') typeClass = 'log-warning';
+            if (type === 'action') typeClass = 'log-action';
+            entry.innerHTML = `<span class="log-time">[${timeStr}]</span><span class="${typeClass}">${message}</span>`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // Показать/скрыть страницы
+        function showMainPage() {
+            processPage.classList.remove('active');
+            waitingPage.classList.remove('active');
+            settingsPage.classList.remove('active');
+            mainPage.style.display = 'block';
+        }
+        function showProcessPage() {
+            mainPage.style.display = 'none';
+            processPage.classList.add('active');
+            isRunning = true;
+            startBtn.disabled = true;
+            cancelBtn.disabled = false;
+        }
+        function hideProcessPage() { showMainPage(); }
+        function showWaitingPage() {
+            mainPage.style.display = 'none';
+            waitingPage.classList.add('active');
+        }
+        function hideWaitingPage() { waitingPage.classList.remove('active'); waitingForApproval = false; }
+        function showSettingsPage() {
+            mainPage.style.display = 'none';
+            settingsPage.classList.add('active');
+        }
+        function hideSettingsPage() { showMainPage(); }
+        
+        // Загрузка данных настроек
+        function loadSettingsData(settings) {
+            if (settings.printer) currentPrinter.textContent = settings.printer;
+            if (settings.auto_print !== undefined) autoPrintStatus.textContent = settings.auto_print ? '✅ Включена' : '❌ Отключена';
+            if (settings.auto_start !== undefined) autoStartStatus.textContent = settings.auto_start ? '✅ Включён' : '❌ Отключён';
+        }
+        
+        // Обновление статуса процесса
+        function updateProcessStatus(status) {
+            const statuses = {
+                'starting': ['🚀 Запуск...', 'Подготовка к работе'],
+                'searching_orders': ['📦 Поиск заказов...', 'Запрос к API Wildberries'],
+                'processing': ['🔄 Обработка...', ''],
+                'downloading': ['📥 Скачивание...', 'Создание стикеров'],
+                'sending': ['📤 Отправка...', 'Загрузка файлов'],
+                'printing': ['🖨️ Печать...', 'Отправка на принтер'],
+                'completed': ['✅ Завершено!', 'Все заказы обработаны'],
+                'cancelled': ['🛑 Отменено', 'Обработка прервана']
+            };
+            const [title, sub] = statuses[status] || ['Запуск...', ''];
+            processStatus.textContent = title;
+            processSubStatus.textContent = sub;
+            if (status === 'completed') {
+                processBadge.innerHTML = '✅ Готово';
+            } else if (status === 'cancelled') {
+                processBadge.innerHTML = '🛑 Отменено';
+            }
+        }
+        
+        // Добавление лога (страница процесса)
+        function addProcessLog(message, type = 'info') {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            let typeClass = 'log-info';
+            if (type === 'success') typeClass = 'log-success';
+            if (type === 'error') typeClass = 'log-error';
+            if (type === 'warning') typeClass = 'log-warning';
+            if (type === 'action') typeClass = 'log-action';
+            entry.innerHTML = `<span class="log-time">[${timeStr}]</span><span class="${typeClass}">${message}</span>`;
+            processLogContainer.appendChild(entry);
+            processLogContainer.scrollTop = processLogContainer.scrollHeight;
+            addLog(message, type);
+        }
+        
+        // Сброс интерфейса
+        function resetUI() {
+            isRunning = false;
+            startBtn.disabled = false;
+            cancelBtn.disabled = true;
+            updateStatus('ready');
+        }
+        
+        addLog('✅ Мини-приложение готово к работе', 'success');
+    </script>
+</body>
+</html>
